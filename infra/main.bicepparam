@@ -14,9 +14,10 @@ param allowedSshSourceCidr = readEnvironmentVariable('DIFY_SSH_CIDR')
 // SSH 公開鍵（公開鍵自体は機密ではないが、公開リポジトリに残さないため env 経由にする）。
 param adminPublicKey = readEnvironmentVariable('DIFY_SSH_PUBKEY')
 
-// 検証 + エージェント品質テスト用。2 vCPU / 8 GiB（B2ms）で Dify 9 コンテナ + 同時負荷の RAM 余裕を確保。
+// 検証 + エージェント品質テスト用。2 vCPU / 8 GiB で Dify 9 コンテナ + 同時負荷の RAM 余裕を確保。
 // 未使用時は停止(deallocate)運用でコンピューティング課金を抑える想定。
-param vmSize = 'Standard_B2ms'
+// ※ japaneast では Standard_B2ms が在庫制限(SkuNotAvailable)のため D2s_v5 を採用。
+param vmSize = 'Standard_D2s_v5'
 param osDiskSizeGB = 64
 param osDiskStorageAccountType = 'StandardSSD_LRS'
 param deployKeyVault = true
