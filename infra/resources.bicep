@@ -65,7 +65,7 @@ var keyVaultName = deployKeyVault ? take('${toLower(replace(namePrefix, '-', '')
 // 関数の評価は resources.bicep からの相対パス（cloud-init.yaml は同 infra/ 配下）。
 var cloudInitCustomData = base64(replace(replace(replace(replace(
   loadTextContent('cloud-init.yaml'),
-  '__ENABLE_TLS__', string(enableTls)),
+  '__ENABLE_TLS__', (enableTls ? 'true' : 'false')),
   '__CERTBOT_EMAIL__', certbotEmail),
   '__DIFY_VERSION__', difyVersion),
   '__KEYVAULT_NAME__', keyVaultName))
