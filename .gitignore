@@ -5,3 +5,13 @@
 
 # Bicep / ビルド成果物
 *.tmp
+
+# Python / uv
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+uv.lock
+
+# 評価結果（実行ごとに変わる成果物）
+evals/results/

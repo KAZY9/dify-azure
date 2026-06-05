@@ -1,0 +1,50 @@
+name: LLMOps Evals
+
+on:
+  push:
+    paths: ["evals/**", ".github/workflows/evals.yml"]
+  pull_request:
+    paths: ["evals/**", ".github/workflows/evals.yml"]
+  schedule:
+    - cron: "0 0 * * 1"   # 毎週月曜 09:00 JST（UTC 00:00）にフル評価
+  workflow_dispatch: {}
+
+jobs:
+  # 決定的ロジックのユニットテスト（シークレット不要・常時実行）
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Unit tests (metrics / normalize)
+        working-directory: evals
+        run: uv run pytest -q
+
+  # 実フロー評価（Dify API 経由）。シークレット必須のため schedule / 手動のみ。
+  eval:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: unit
+    env:
+      DIFY_API_BASE: ${{ secrets.DIFY_API_BASE }}
+      DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+      DIFY_VERIFY_SSL: ${{ vars.DIFY_VERIFY_SSL || 'false' }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT || 'gpt-4.1' }}
+      LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST || 'https://cloud.langfuse.com' }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+      PASS_THRESHOLD: ${{ vars.PASS_THRESHOLD || '0.8' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Run extraction eval
+        working-directory: evals
+        run: uv run python -m quote_eval.run_eval
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: evals/results/latest.json

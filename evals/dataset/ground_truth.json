@@ -1,0 +1,108 @@
+{
+  "schema": ["quote_no", "issue_date", "valid_until", "customer", "vendor", "subject", "subtotal", "tax", "total", "line_items"],
+  "samples": [
+    {
+      "file": "quotation_1_techwave.pdf",
+      "expected": {
+        "quote_no": "EST-2026-0512",
+        "issue_date": "2026-05-12",
+        "valid_until": "2026-06-30",
+        "customer": "山田商事株式会社",
+        "vendor": "株式会社テックウェイブ",
+        "subject": "コーポレートサイト リニューアル開発",
+        "subtotal": 1680000,
+        "tax": 168000,
+        "total": 1848000,
+        "line_items": [
+          {"name": "要件定義・設計", "qty": 1, "unit_price": 350000, "amount": 350000},
+          {"name": "デザイン制作（トップ+下層5ページ）", "qty": 6, "unit_price": 45000, "amount": 270000},
+          {"name": "フロントエンド実装", "qty": 1, "unit_price": 480000, "amount": 480000},
+          {"name": "CMS構築（WordPress）", "qty": 1, "unit_price": 220000, "amount": 220000},
+          {"name": "保守サポート（初年度）", "qty": 12, "unit_price": 30000, "amount": 360000}
+        ]
+      }
+    },
+    {
+      "file": "quotation_2_officesupport.pdf",
+      "expected": {
+        "quote_no": "Q20260418-007",
+        "issue_date": "2026-04-18",
+        "valid_until": "2026-05-18",
+        "customer": "株式会社グリーンフーズ",
+        "vendor": "オフィスサポート合同会社",
+        "subject": "オフィス備品 一式",
+        "subtotal": 911000,
+        "tax": 91100,
+        "total": 1002100,
+        "line_items": [
+          {"name": "オフィスチェア（メッシュ）", "qty": 12, "unit_price": 18500, "amount": 222000},
+          {"name": "昇降デスク 120cm", "qty": 8, "unit_price": 42000, "amount": 336000},
+          {"name": "モニターアーム", "qty": 10, "unit_price": 6800, "amount": 68000},
+          {"name": "複合機（リース外・買取）", "qty": 1, "unit_price": 285000, "amount": 285000}
+        ]
+      }
+    },
+    {
+      "file": "quotation_3_mirai_kensetsu.pdf",
+      "expected": {
+        "quote_no": "MIRAI-26-0331",
+        "issue_date": "2026-03-31",
+        "valid_until": "2026-05-31",
+        "customer": "さくら不動産株式会社",
+        "vendor": "みらい建設株式会社",
+        "subject": "テナント内装工事（3F 区画A）",
+        "subtotal": 3197000,
+        "tax": 319700,
+        "total": 3516700,
+        "line_items": [
+          {"name": "仮設工事", "qty": 1, "unit_price": 180000, "amount": 180000},
+          {"name": "軽量鉄骨下地・ボード工事", "qty": 95, "unit_price": 8200, "amount": 779000},
+          {"name": "内装仕上（クロス・床）", "qty": 95, "unit_price": 6400, "amount": 608000},
+          {"name": "電気設備工事", "qty": 1, "unit_price": 620000, "amount": 620000},
+          {"name": "空調設備（業務用2台）", "qty": 2, "unit_price": 380000, "amount": 760000},
+          {"name": "諸経費", "qty": 1, "unit_price": 250000, "amount": 250000}
+        ]
+      }
+    },
+    {
+      "file": "quotation_4_cloudsolutions.pdf",
+      "expected": {
+        "quote_no": "CS-INV-2026-114",
+        "issue_date": "2026-06-01",
+        "valid_until": "2026-06-21",
+        "customer": "日本ロジスティクス株式会社",
+        "vendor": "クラウドソリューションズ株式会社",
+        "subject": "在庫管理SaaS 年間利用契約",
+        "subtotal": 2300000,
+        "tax": 230000,
+        "total": 2530000,
+        "line_items": [
+          {"name": "基本プラン（年額・50ユーザー）", "qty": 1, "unit_price": 1200000, "amount": 1200000},
+          {"name": "追加ユーザーライセンス", "qty": 30, "unit_price": 18000, "amount": 540000},
+          {"name": "初期導入・データ移行支援", "qty": 1, "unit_price": 400000, "amount": 400000},
+          {"name": "オンボーディング研修", "qty": 2, "unit_price": 80000, "amount": 160000}
+        ]
+      }
+    },
+    {
+      "file": "quotation_5_designstudio_hana.pdf",
+      "expected": {
+        "quote_no": "HANA-0226",
+        "issue_date": "2026-02-26",
+        "valid_until": "2026-03-25",
+        "customer": "株式会社ベルフラワー",
+        "vendor": "デザインスタジオ ハナ",
+        "subject": "ブランドリニューアル一式（ロゴ・VI）",
+        "subtotal": 595000,
+        "tax": 59500,
+        "total": 654500,
+        "line_items": [
+          {"name": "ロゴデザイン（3案提案・1案納品）", "qty": 1, "unit_price": 280000, "amount": 280000},
+          {"name": "ブランドガイドライン策定", "qty": 1, "unit_price": 180000, "amount": 180000},
+          {"name": "名刺・封筒デザイン", "qty": 1, "unit_price": 60000, "amount": 60000},
+          {"name": "Webバナー制作", "qty": 5, "unit_price": 15000, "amount": 75000}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+[project]
+name = "quote-eval"
+version = "0.1.0"
+description = "見積書抽出フロー（Dify）の LLMOps 評価ハーネス"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+    "openai>=1.50",
+    "langfuse>=2.53,<3.0",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
