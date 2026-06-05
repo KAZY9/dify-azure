@@ -57,9 +57,27 @@ param difyVersion string = '1.14.2'
 @secure()
 param difySecretKey string = newGuid()
 
+@description('Dify 用の Azure OpenAI を作成する。')
+param deployOpenAI bool = true
+
+@description('Azure OpenAI のリージョン（gpt-4.1 GlobalStandard が利用可能な eastus 推奨）。')
+param openAiLocation string = 'eastus'
+
+@description('Azure OpenAI のモデル/デプロイ名。')
+param openAiModel string = 'gpt-4.1'
+
+@description('Azure OpenAI モデルのバージョン。')
+param openAiModelVersion string = '2025-04-14'
+
+@description('Azure OpenAI デプロイ容量（1000 TPM 単位）。')
+param openAiCapacity int = 10
+
 // Key Vault 名（モジュールと cloud-init で同じ名前を使うためここで一度だけ算出）。
 // グローバル一意・24 文字以内・英数字。
 var keyVaultName = deployKeyVault ? take('${toLower(replace(namePrefix, '-', ''))}kv${uniqueString(resourceGroup().id)}', 24) : ''
+
+// Azure OpenAI アカウント名（グローバル一意・小文字英数とハイフン）。
+var openAiAccountName = deployOpenAI ? take('oai-${namePrefix}-${uniqueString(resourceGroup().id)}', 24) : ''
 
 // cloud-init のプレースホルダを置換して base64 化する。
 // 関数の評価は resources.bicep からの相対パス（cloud-init.yaml は同 infra/ 配下）。
@@ -119,5 +137,25 @@ output startCommand string = 'az vm start -g ${resourceGroup().name} -n ${vm.out
 @description('Dify コンソール URL（enableTls 時は自己署名 HTTPS、ブラウザ警告あり）。')
 output difyUrl string = enableTls ? 'https://${network.outputs.publicIpAddress}' : 'http://${network.outputs.publicIpAddress}'
 
+module openai 'modules/openai.bicep' = if (deployOpenAI) {
+  name: 'openai'
+  params: {
+    location: openAiLocation
+    accountName: openAiAccountName
+    modelName: openAiModel
+    modelVersion: openAiModelVersion
+    capacity: openAiCapacity
+  }
+}
+
 @description('作成された Key Vault 名（未作成なら空）。')
 output keyVaultName string = keyVault.?outputs.keyVaultName ?? ''
+
+@description('Azure OpenAI エンドポイント（Dify の API Base に設定）。')
+output openAiEndpoint string = openai.?outputs.endpoint ?? ''
+
+@description('Azure OpenAI アカウント名（キー取得に使用）。')
+output openAiAccountName string = openai.?outputs.accountName ?? ''
+
+@description('Azure OpenAI デプロイ名（Dify の Deployment Name に設定）。')
+output openAiDeploymentName string = openai.?outputs.deploymentName ?? ''
