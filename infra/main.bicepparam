@@ -16,8 +16,9 @@ param adminPublicKey = readEnvironmentVariable('DIFY_SSH_PUBKEY')
 
 // 検証 + エージェント品質テスト用。2 vCPU / 8 GiB で Dify 9 コンテナ + 同時負荷の RAM 余裕を確保。
 // 未使用時は停止(deallocate)運用でコンピューティング課金を抑える想定。
-// ※ japaneast では Standard_B2ms が在庫制限(SkuNotAvailable)のため D2s_v5 を採用。
-param vmSize = 'Standard_D2s_v5'
+// ※ japaneast/当サブスクリプションでは B2ms=在庫制限, Dsv5=クォータ0, Dsv4=SKU制限のため、
+//   在庫・クォータとも空いている DSv3 世代の Standard_D2s_v3 を採用。
+param vmSize = 'Standard_D2s_v3'
 param osDiskSizeGB = 64
 param osDiskStorageAccountType = 'StandardSSD_LRS'
 param deployKeyVault = true
