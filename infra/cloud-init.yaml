@@ -1,0 +1,40 @@
+#cloud-config
+# VM 初回起動時に Docker Engine を導入し、Dify 公式 docker compose を起動する。
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+
+write_files:
+  - path: /opt/dify-bootstrap.sh
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      # --- Docker Engine + compose プラグインの導入 ---
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+        > /etc/apt/sources.list.d/docker.list
+      apt-get update
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+      # --- Dify を取得して公式 compose で起動 ---
+      # 本番運用ではタグ（例: git checkout 1.x.x）でバージョン固定を推奨。
+      DIFY_HOME=/opt/dify
+      if [ ! -d "$DIFY_HOME" ]; then
+        git clone https://github.com/langgenius/dify.git "$DIFY_HOME"
+      fi
+      cd "$DIFY_HOME/docker"
+      cp -n .env.example .env
+      # TODO: Key Vault から取得したシークレット（SECRET_KEY, Azure OpenAI など）を .env に反映する
+      docker compose up -d
+
+runcmd:
+  - /opt/dify-bootstrap.sh
