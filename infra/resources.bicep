@@ -50,12 +50,25 @@ param enableTls bool = true
 @description('Let\'s Encrypt 登録用メールアドレス（dify-enable-tls.sh に埋め込む）。')
 param certbotEmail string = 'admin@example.com'
 
+@description('固定する Dify のバージョン（git タグ）。main で最新を追従。')
+param difyVersion string = '1.14.2'
+
+@description('Dify の SECRET_KEY として Key Vault に格納する値。既定は新規 GUID。')
+@secure()
+param difySecretKey string = newGuid()
+
+// Key Vault 名（モジュールと cloud-init で同じ名前を使うためここで一度だけ算出）。
+// グローバル一意・24 文字以内・英数字。
+var keyVaultName = deployKeyVault ? take('${toLower(replace(namePrefix, '-', ''))}kv${uniqueString(resourceGroup().id)}', 24) : ''
+
 // cloud-init のプレースホルダを置換して base64 化する。
 // 関数の評価は resources.bicep からの相対パス（cloud-init.yaml は同 infra/ 配下）。
-var cloudInitCustomData = base64(replace(replace(
+var cloudInitCustomData = base64(replace(replace(replace(replace(
   loadTextContent('cloud-init.yaml'),
   '__ENABLE_TLS__', string(enableTls)),
-  '__CERTBOT_EMAIL__', certbotEmail))
+  '__CERTBOT_EMAIL__', certbotEmail),
+  '__DIFY_VERSION__', difyVersion),
+  '__KEYVAULT_NAME__', keyVaultName))
 
 module network 'modules/network.bicep' = {
   name: 'network'
@@ -88,8 +101,9 @@ module keyVault 'modules/keyvault.bicep' = if (deployKeyVault) {
   name: 'keyvault'
   params: {
     location: location
-    namePrefix: namePrefix
+    keyVaultName: keyVaultName
     vmPrincipalId: vm.outputs.principalId
+    difySecretKey: difySecretKey
   }
 }
 

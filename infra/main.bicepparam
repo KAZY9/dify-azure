@@ -28,3 +28,9 @@ param autoShutdownTime = '1900'
 // ドメイン取得後に VM 上で `sudo /opt/dify-enable-tls.sh <domain>` を実行して Let's Encrypt に差し替える。
 param enableTls = true
 param certbotEmail = 'kazu.m.sora9@gmail.com'
+
+// Dify のバージョン固定（git タグ）。更新時はこの値を上げる。2.0.0 はまだ beta。
+param difyVersion = '1.14.2'
+
+// difySecretKey は未指定なら newGuid() で自動生成され Key Vault(dify-secret-key) に格納される。
+// 固定したい場合のみ: param difySecretKey = '<強固なランダム文字列>'

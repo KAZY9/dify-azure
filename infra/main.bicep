@@ -53,6 +53,13 @@ param enableTls bool = true
 @description('Let\'s Encrypt 登録用メールアドレス（dify-enable-tls.sh に埋め込む）。')
 param certbotEmail string = 'admin@example.com'
 
+@description('固定する Dify のバージョン（git タグ）。main で最新を追従。')
+param difyVersion string = '1.14.2'
+
+@description('Dify の SECRET_KEY として Key Vault に格納する値。既定は新規 GUID。')
+@secure()
+param difySecretKey string = newGuid()
+
 // リソースグループを作成
 resource rg 'Microsoft.Resources/resourceGroups@2024-11-01' = {
   name: resourceGroupName
@@ -77,6 +84,8 @@ module resources 'resources.bicep' = {
     autoShutdownTime: autoShutdownTime
     enableTls: enableTls
     certbotEmail: certbotEmail
+    difyVersion: difyVersion
+    difySecretKey: difySecretKey
   }
 }
 

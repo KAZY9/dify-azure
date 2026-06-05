@@ -87,6 +87,19 @@ sudo /opt/dify-enable-tls.sh example.com    # certbotEmail はデプロイ時に
 - 更新（cron 化推奨）: `cd /opt/dify/docker && docker compose exec certbot certbot renew && docker compose exec nginx nginx -s reload`
 - ※ certbot 周りの手順は Dify 公式 `docker/certbot/README.md` に準拠。Dify のバージョンによりファイル名・手順が異なる場合があるため、失敗時は同 README を参照。
 
+## シークレット（Key Vault → .env）
+
+- Bicep が Key Vault にシークレット `dify-secret-key`（既定値は `newGuid()`）を作成する。固定値にしたい場合は `main.bicepparam` で `difySecretKey` を指定。
+- VM はマネージド ID（"Key Vault Secrets User" 付与済み）で起動時に `dify-secret-key` を取得し、Dify の `.env` の `SECRET_KEY` に注入する（RBAC 伝播待ちのリトライ付き）。取得できない場合は `openssl rand` で自動生成してフォールバック。
+- Azure OpenAI などモデルプロバイダーの資格情報は通常 Dify の Web コンソールから設定する（`.env` ではなく DB に暗号化保存）。同様の方式で `.env` 注入したい場合は `cloud-init.yaml` の TODO 箇所を拡張する。
+- ⚠️ シークレット作成のため、デプロイ実行者(deployer)に "Key Vault Secrets Officer" を付与する。**デプロイにはロール割り当て権限（Owner または User Access Administrator）が必要**。
+
+## バージョン固定
+
+- Dify は `difyVersion`（既定 `1.14.2`）の git タグで固定して clone する（`git clone --depth 1 --branch <tag>`）。
+- 更新時は `main.bicepparam` の `difyVersion` を上げる。`main` を指定すると最新追従（非推奨）。
+- 最新タグの確認: `git ls-remote --tags https://github.com/langgenius/dify.git`。
+
 ## 検証（lint / build）
 
 ```bash
@@ -97,6 +110,5 @@ az bicep build --file infra/main.bicep   # ARM への変換可否を確認
 ## 補足・残タスク
 
 - **TLS 化**: 初回は自己署名証明書で HTTPS 化済み（上記「TLS / HTTPS」参照）。ドメイン取得後に Let's Encrypt へ差し替える。
-- **シークレット**: `cloud-init.yaml` の TODO のとおり、Key Vault から `SECRET_KEY` や Azure OpenAI のキーを取得して `.env` に反映する処理が未実装。
-- **バージョン固定**: `cloud-init.yaml` は Dify を `main` から clone する。本番ではタグ指定で固定する。
 - **SSH 元の制限**: `allowedSshSourceCidr` は必ず自分の IP に絞る。Bastion 利用ならパブリック IP を外す構成も検討。
+- **LLMOps 評価基盤**: `evals/`（Langfuse / Ragas）は未実装。

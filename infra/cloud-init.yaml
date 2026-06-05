@@ -1,6 +1,7 @@
 #cloud-config
 # VM 初回起動時に Docker Engine を導入し、Dify 公式 docker compose を起動する。
-# __ENABLE_TLS__ / __CERTBOT_EMAIL__ は Bicep(resources.bicep) でデプロイ時に置換される。
+# __DIFY_VERSION__ / __KEYVAULT_NAME__ / __ENABLE_TLS__ / __CERTBOT_EMAIL__ は
+# Bicep(resources.bicep) でデプロイ時に置換される。
 package_update: true
 package_upgrade: true
 
@@ -9,6 +10,7 @@ packages:
   - curl
   - git
   - gnupg
+  - jq
   - openssl
 
 write_files:
@@ -27,15 +29,50 @@ write_files:
       apt-get update
       apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-      # --- Dify を取得して公式 compose で起動 ---
-      # 本番運用ではタグ（例: git checkout 1.x.x）でバージョン固定を推奨。
+      # --- Dify を取得（バージョン固定）して公式 compose で起動 ---
+      DIFY_VERSION="__DIFY_VERSION__"
       DIFY_HOME=/opt/dify
       if [ ! -d "$DIFY_HOME" ]; then
-        git clone https://github.com/langgenius/dify.git "$DIFY_HOME"
+        if [ "$DIFY_VERSION" = "main" ] || [ -z "$DIFY_VERSION" ]; then
+          git clone --depth 1 https://github.com/langgenius/dify.git "$DIFY_HOME"
+        else
+          git clone --depth 1 --branch "$DIFY_VERSION" https://github.com/langgenius/dify.git "$DIFY_HOME"
+        fi
       fi
       cd "$DIFY_HOME/docker"
       cp -n .env.example .env
-      # TODO: Key Vault から取得したシークレット（SECRET_KEY, Azure OpenAI など）を .env に反映する
+
+      # --- SECRET_KEY を Key Vault から注入（無ければローカル生成） ---
+      KV_NAME="__KEYVAULT_NAME__"
+      SECRET_VALUE=""
+      if [ -n "$KV_NAME" ]; then
+        # マネージド ID で Key Vault 用トークンを取得し REST でシークレットを読む。
+        # ロール(Secrets User)伝播待ちのためリトライする。
+        for _ in $(seq 1 10); do
+          TOKEN="$(curl -s -H Metadata:true --max-time 10 \
+            'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' \
+            | jq -r '.access_token // empty')"
+          if [ -n "$TOKEN" ]; then
+            SECRET_VALUE="$(curl -s --max-time 10 -H "Authorization: Bearer $TOKEN" \
+              "https://${KV_NAME}.vault.azure.net/secrets/dify-secret-key?api-version=7.4" \
+              | jq -r '.value // empty')"
+          fi
+          [ -n "$SECRET_VALUE" ] && break
+          sleep 15
+        done
+      fi
+      if [ -z "$SECRET_VALUE" ]; then
+        # Key Vault 未使用 or 取得失敗時のフォールバック
+        SECRET_VALUE="$(openssl rand -base64 42)"
+      fi
+      if grep -q '^SECRET_KEY=' .env; then
+        sed -i "s|^SECRET_KEY=.*|SECRET_KEY=${SECRET_VALUE}|" .env
+      else
+        echo "SECRET_KEY=${SECRET_VALUE}" >> .env
+      fi
+      # TODO: Azure OpenAI 等の追加シークレットも同様に KV から注入できる
+      #       （Dify のモデルプロバイダーは通常 Web コンソールから設定）
+
       docker compose up -d
 
       # --- 自己署名証明書による暫定 HTTPS 化（ドメイン未取得時） ---
