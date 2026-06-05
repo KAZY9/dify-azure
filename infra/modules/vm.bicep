@@ -46,7 +46,7 @@ param autoShutdownTime string = '1900'
 @description('自動停止のタイムゾーン（Windows タイムゾーン ID）。JST は Tokyo Standard Time。')
 param autoShutdownTimeZone string = 'Tokyo Standard Time'
 
-resource nic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
+resource nic 'Microsoft.Network/networkInterfaces@2024-07-01' = {
   name: '${namePrefix}-nic'
   location: location
   properties: {

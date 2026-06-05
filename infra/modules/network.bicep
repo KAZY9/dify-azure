@@ -16,7 +16,7 @@ param vnetAddressPrefix string = '10.0.0.0/16'
 @description('Dify サブネットのアドレス空間。')
 param subnetAddressPrefix string = '10.0.1.0/24'
 
-resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
+resource nsg 'Microsoft.Network/networkSecurityGroups@2024-07-01' = {
   name: '${namePrefix}-nsg'
   location: location
   properties: {
@@ -64,7 +64,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
   }
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2024-07-01' = {
   name: '${namePrefix}-vnet'
   location: location
   properties: {
@@ -85,7 +85,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   }
 }
 
-resource publicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+resource publicIp 'Microsoft.Network/publicIPAddresses@2024-07-01' = {
   name: '${namePrefix}-pip'
   location: location
   sku: {

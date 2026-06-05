@@ -19,7 +19,7 @@ var keyVaultName = take('${toLower(replace(namePrefix, '-', ''))}kv${uniqueStrin
 // "Key Vault Secrets User" ロール定義 ID（組み込み）
 var secretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' = {
   name: keyVaultName
   location: location
   properties: {

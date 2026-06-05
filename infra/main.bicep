@@ -54,7 +54,7 @@ param enableTls bool = true
 param certbotEmail string = 'admin@example.com'
 
 // リソースグループを作成
-resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+resource rg 'Microsoft.Resources/resourceGroups@2024-11-01' = {
   name: resourceGroupName
   location: location
 }
