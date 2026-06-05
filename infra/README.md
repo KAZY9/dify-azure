@@ -14,7 +14,8 @@ infra/
 └── modules/
     ├── network.bicep     # VNet / Subnet / NSG / Public IP
     ├── vm.bicep          # NIC / Ubuntu 22.04 VM（SSH 鍵認証・マネージド ID・自動停止）
-    └── keyvault.bicep    # Key Vault + VM への Secrets 読み取りロール付与
+    ├── keyvault.bicep    # Key Vault + VM への Secrets 読み取りロール付与
+    └── openai.bicep      # Azure OpenAI（gpt-4.1）。Dify のモデルプロバイダー用
 ```
 
 `main.bicep` がリソースグループ（既定 `dify-rg` / `japaneast`）自体を作成するため、事前の `az group create` は不要。
@@ -112,6 +113,27 @@ set -a; source infra/.env; set +a  # 読み込み（デプロイ前に毎回）
 
 > 手軽に済ませたい場合は env を使わず CLI 上書きでも可:
 > `az deployment sub create ... --parameters allowedSshSourceCidr='<ip>/32' adminPublicKey="$(cat ~/.ssh/dify_azure.pub)"`
+
+## Azure OpenAI（Dify のモデルプロバイダー）
+
+`deployOpenAI = true`（既定）のとき、`openai.bicep` が Azure OpenAI アカウント（既定 eastus）と `gpt-4.1` デプロイをキー認証ありで作成する。
+
+- リージョンは **eastus**（gpt-4.1 GlobalStandard の枠があるため。japaneast はリアルタイム枠なし）。
+- デプロイ後、Dify のモデルプロバイダー設定（Azure OpenAI Service）に以下を登録:
+
+| Dify の項目 | 値の取得元 |
+|---|---|
+| API Base | デプロイ出力 `openAiEndpoint` |
+| Deployment Name | デプロイ出力 `openAiDeploymentName`（= `gpt-4.1`） |
+| API Version | `2024-10-21`（不可なら `2025-01-01-preview`） |
+| API Key | 下記コマンドで取得 |
+
+```bash
+# アカウント名はデプロイ出力 openAiAccountName
+az cognitiveservices account keys list -n <openAiAccountName> -g dify-rg --query key1 -o tsv
+```
+
+> 既存の `oai-itc-history` は `disableLocalAuth=true`（キー認証無効）で Dify から直接使えないため、専用アカウントを新規作成している。
 
 ## シークレット（Key Vault → .env）
 

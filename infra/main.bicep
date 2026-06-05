@@ -60,6 +60,21 @@ param difyVersion string = '1.14.2'
 @secure()
 param difySecretKey string = newGuid()
 
+@description('Dify 用の Azure OpenAI を作成する。')
+param deployOpenAI bool = true
+
+@description('Azure OpenAI のリージョン（gpt-4.1 GlobalStandard が利用可能な eastus 推奨）。')
+param openAiLocation string = 'eastus'
+
+@description('Azure OpenAI のモデル/デプロイ名。')
+param openAiModel string = 'gpt-4.1'
+
+@description('Azure OpenAI モデルのバージョン。')
+param openAiModelVersion string = '2025-04-14'
+
+@description('Azure OpenAI デプロイ容量（1000 TPM 単位）。')
+param openAiCapacity int = 10
+
 // リソースグループを作成
 resource rg 'Microsoft.Resources/resourceGroups@2024-11-01' = {
   name: resourceGroupName
@@ -86,6 +101,11 @@ module resources 'resources.bicep' = {
     certbotEmail: certbotEmail
     difyVersion: difyVersion
     difySecretKey: difySecretKey
+    deployOpenAI: deployOpenAI
+    openAiLocation: openAiLocation
+    openAiModel: openAiModel
+    openAiModelVersion: openAiModelVersion
+    openAiCapacity: openAiCapacity
   }
 }
 
@@ -106,3 +126,12 @@ output difyUrl string = resources.outputs.difyUrl
 
 @description('作成された Key Vault 名（未作成なら空）。')
 output keyVaultName string = resources.outputs.keyVaultName
+
+@description('Azure OpenAI エンドポイント（Dify の API Base）。')
+output openAiEndpoint string = resources.outputs.openAiEndpoint
+
+@description('Azure OpenAI アカウント名（キー取得に使用）。')
+output openAiAccountName string = resources.outputs.openAiAccountName
+
+@description('Azure OpenAI デプロイ名（Dify の Deployment Name）。')
+output openAiDeploymentName string = resources.outputs.openAiDeploymentName

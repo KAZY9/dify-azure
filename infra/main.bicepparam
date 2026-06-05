@@ -37,3 +37,11 @@ param difyVersion = '1.14.2'
 
 // difySecretKey は未指定なら newGuid() で自動生成され Key Vault(dify-secret-key) に格納される。
 // 固定したい場合のみ: param difySecretKey = '<強固なランダム文字列>'
+
+// Dify 用 Azure OpenAI（既存の oai-itc-history はキー認証無効のため専用を作成）。
+// gpt-4.1 の GlobalStandard 枠がある eastus に作成する。
+param deployOpenAI = true
+param openAiLocation = 'eastus'
+param openAiModel = 'gpt-4.1'
+param openAiModelVersion = '2025-04-14'
+param openAiCapacity = 10
