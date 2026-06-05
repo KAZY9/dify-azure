@@ -23,3 +23,8 @@ param deployKeyVault = true
 // 「使う前に手動 az vm start、夜は自動 stop」運用。停止は毎日 19:00 JST。
 param enableAutoShutdown = true
 param autoShutdownTime = '1900'
+
+// TLS: ドメイン未取得のため初回は自己署名証明書で HTTPS 化（ブラウザ警告あり）。
+// ドメイン取得後に VM 上で `sudo /opt/dify-enable-tls.sh <domain>` を実行して Let's Encrypt に差し替える。
+param enableTls = true
+param certbotEmail = 'kazu.m.sora9@gmail.com'

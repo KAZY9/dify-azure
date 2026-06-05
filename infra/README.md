@@ -62,6 +62,31 @@ az vm deallocate -g dify-rg -n dify-vm
 - Public IP は **Static** のため、停止→起動で **IP は変わらない**。
 - Dify コンテナは `restart: always` + Docker 自動起動により、**起動後に自動復帰**する（データは名前付きボリュームに永続）。
 
+## TLS / HTTPS
+
+ドメイン未取得のため **2 段構え**で TLS 化する。
+
+### 1. 初回: 自己署名証明書（自動）
+
+`enableTls = true`（既定）のとき、cloud-init が初回起動時に自己署名証明書を生成し HTTPS を有効化する。
+
+- アクセス: `https://<publicIpAddress>`（デプロイ出力 `difyUrl`）
+- ⚠️ 正規 CA の証明書ではないため**ブラウザ警告が出る**（暗号化自体は有効）。検証用途では許容、本番では下記の Let's Encrypt に差し替える。
+
+### 2. ドメイン取得後: Let's Encrypt（手動）
+
+ドメインを取得し、A レコードを VM のパブリック IP に向けて DNS 伝播を確認したら、VM 上で実行する。
+
+```bash
+# A レコード（example.com → publicIpAddress）設定 & 伝播確認後
+ssh azureuser@<publicIpAddress>
+sudo /opt/dify-enable-tls.sh example.com    # certbotEmail はデプロイ時に埋め込み済み
+```
+
+- 証明書は Let's Encrypt（certbot）で取得し、以後 `https://example.com` で正規証明書になる。
+- 更新（cron 化推奨）: `cd /opt/dify/docker && docker compose exec certbot certbot renew && docker compose exec nginx nginx -s reload`
+- ※ certbot 周りの手順は Dify 公式 `docker/certbot/README.md` に準拠。Dify のバージョンによりファイル名・手順が異なる場合があるため、失敗時は同 README を参照。
+
 ## 検証（lint / build）
 
 ```bash
@@ -71,7 +96,7 @@ az bicep build --file infra/main.bicep   # ARM への変換可否を確認
 
 ## 補足・残タスク
 
-- **TLS 化**: 現状は HTTP(80) 公開。ドメインを割り当て、Nginx + Let's Encrypt(certbot) で HTTPS 化する。
+- **TLS 化**: 初回は自己署名証明書で HTTPS 化済み（上記「TLS / HTTPS」参照）。ドメイン取得後に Let's Encrypt へ差し替える。
 - **シークレット**: `cloud-init.yaml` の TODO のとおり、Key Vault から `SECRET_KEY` や Azure OpenAI のキーを取得して `.env` に反映する処理が未実装。
 - **バージョン固定**: `cloud-init.yaml` は Dify を `main` から clone する。本番ではタグ指定で固定する。
 - **SSH 元の制限**: `allowedSshSourceCidr` は必ず自分の IP に絞る。Bastion 利用ならパブリック IP を外す構成も検討。

@@ -44,6 +44,19 @@ param enableAutoShutdown bool = true
 @description('自動停止の時刻（HHmm 形式, JST）。例: 1900 = 19:00。')
 param autoShutdownTime string = '1900'
 
+@description('初回起動時に自己署名証明書で HTTPS を有効化する。ドメイン取得後は dify-enable-tls.sh で Let\'s Encrypt に差し替え。')
+param enableTls bool = true
+
+@description('Let\'s Encrypt 登録用メールアドレス（dify-enable-tls.sh に埋め込む）。')
+param certbotEmail string = 'admin@example.com'
+
+// cloud-init のプレースホルダを置換して base64 化する。
+// 関数の評価は resources.bicep からの相対パス（cloud-init.yaml は同 infra/ 配下）。
+var cloudInitCustomData = base64(replace(replace(
+  loadTextContent('cloud-init.yaml'),
+  '__ENABLE_TLS__', string(enableTls)),
+  '__CERTBOT_EMAIL__', certbotEmail))
+
 module network 'modules/network.bicep' = {
   name: 'network'
   params: {
@@ -67,8 +80,7 @@ module vm 'modules/vm.bicep' = {
     osDiskStorageAccountType: osDiskStorageAccountType
     enableAutoShutdown: enableAutoShutdown
     autoShutdownTime: autoShutdownTime
-    // cloud-init は resources.bicep からの相対パスで読み込む
-    customData: loadFileAsBase64('cloud-init.yaml')
+    customData: cloudInitCustomData
   }
 }
 
@@ -90,8 +102,8 @@ output sshCommand string = 'ssh ${adminUsername}@${network.outputs.publicIpAddre
 @description('VM の手動起動コマンド（夜間自動停止後の利用前に実行）。')
 output startCommand string = 'az vm start -g ${resourceGroup().name} -n ${vm.outputs.vmName}'
 
-@description('Dify コンソール URL（TLS 設定前は HTTP）。')
-output difyUrl string = 'http://${network.outputs.publicIpAddress}'
+@description('Dify コンソール URL（enableTls 時は自己署名 HTTPS、ブラウザ警告あり）。')
+output difyUrl string = enableTls ? 'https://${network.outputs.publicIpAddress}' : 'http://${network.outputs.publicIpAddress}'
 
 @description('作成された Key Vault 名（未作成なら空）。')
-output keyVaultName string = deployKeyVault ? keyVault.outputs.keyVaultName : ''
+output keyVaultName string = keyVault.?outputs.keyVaultName ?? ''

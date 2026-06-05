@@ -1,5 +1,6 @@
 #cloud-config
 # VM 初回起動時に Docker Engine を導入し、Dify 公式 docker compose を起動する。
+# __ENABLE_TLS__ / __CERTBOT_EMAIL__ は Bicep(resources.bicep) でデプロイ時に置換される。
 package_update: true
 package_upgrade: true
 
@@ -8,6 +9,7 @@ packages:
   - curl
   - git
   - gnupg
+  - openssl
 
 write_files:
   - path: /opt/dify-bootstrap.sh
@@ -35,6 +37,74 @@ write_files:
       cp -n .env.example .env
       # TODO: Key Vault から取得したシークレット（SECRET_KEY, Azure OpenAI など）を .env に反映する
       docker compose up -d
+
+      # --- 自己署名証明書による暫定 HTTPS 化（ドメイン未取得時） ---
+      # ドメイン取得後は /opt/dify-enable-tls.sh <domain> で Let's Encrypt に差し替える。
+      if [ "__ENABLE_TLS__" = "true" ]; then
+        SSL_DIR="$DIFY_HOME/docker/nginx/ssl"
+        mkdir -p "$SSL_DIR"
+        if [ ! -f "$SSL_DIR/dify.crt" ]; then
+          # CN はパブリック IP（IMDS から取得、失敗時は dify）
+          PUBLIC_IP="$(curl -s -H Metadata:true --max-time 5 \
+            'http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2021-02-01&format=text' || true)"
+          [ -z "${PUBLIC_IP:-}" ] && PUBLIC_IP=dify
+          openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+            -keyout "$SSL_DIR/dify.key" -out "$SSL_DIR/dify.crt" \
+            -subj "/CN=${PUBLIC_IP}"
+        fi
+        # .env で HTTPS を有効化（証明書ファイル名は既定の dify.crt / dify.key）
+        if grep -q '^NGINX_HTTPS_ENABLED=' .env; then
+          sed -i 's/^NGINX_HTTPS_ENABLED=.*/NGINX_HTTPS_ENABLED=true/' .env
+        else
+          echo 'NGINX_HTTPS_ENABLED=true' >> .env
+        fi
+        docker compose up -d
+      fi
+
+  - path: /opt/dify-enable-tls.sh
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      # ドメイン取得後に Let's Encrypt 証明書へ差し替えるスクリプト。
+      #   使い方: sudo /opt/dify-enable-tls.sh example.com
+      # 前提: 引数のドメインの A レコードがこの VM のパブリック IP に向いていること（DNS 伝播済み）。
+      # ※ certbot の手順は Dify 公式（docker/certbot/README.md）に準拠。Dify のバージョンにより
+      #   ファイル名・手順が異なる場合があるため、失敗時は同 README を確認すること。
+      set -euo pipefail
+
+      DOMAIN="${1:?Usage: $0 <domain>}"
+      EMAIL="__CERTBOT_EMAIL__"
+      DIFY_HOME=/opt/dify
+      cd "$DIFY_HOME/docker"
+
+      set_env() {
+        local k="$1" v="$2"
+        if grep -q "^${k}=" .env; then
+          sed -i "s|^${k}=.*|${k}=${v}|" .env
+        else
+          echo "${k}=${v}" >> .env
+        fi
+      }
+
+      # Let's Encrypt 用の .env 設定
+      set_env NGINX_HTTPS_ENABLED true
+      set_env NGINX_ENABLE_CERTBOT_CHALLENGE true
+      set_env NGINX_SERVER_NAME "$DOMAIN"
+      set_env CERTBOT_DOMAIN "$DOMAIN"
+      set_env CERTBOT_EMAIL "$EMAIL"
+
+      # certbot プロファイルで起動し、証明書を取得
+      docker compose --profile certbot up -d --force-recreate
+      docker compose exec -T certbot /bin/sh /update-cert.sh
+
+      # nginx を Let's Encrypt 証明書に切替えて再起動
+      set_env NGINX_SSL_CERT_FILENAME fullchain.pem
+      set_env NGINX_SSL_CERT_KEY_FILENAME privkey.pem
+      docker compose --profile certbot up -d --force-recreate nginx
+
+      echo "TLS 有効化完了: https://${DOMAIN}"
+      echo "証明書の更新（cron 化推奨）:"
+      echo "  cd ${DIFY_HOME}/docker && docker compose exec certbot certbot renew && docker compose exec nginx nginx -s reload"
 
 runcmd:
   - /opt/dify-bootstrap.sh

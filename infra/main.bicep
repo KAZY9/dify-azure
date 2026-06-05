@@ -47,6 +47,12 @@ param enableAutoShutdown bool = true
 @description('自動停止の時刻（HHmm 形式, JST）。例: 1900 = 19:00。')
 param autoShutdownTime string = '1900'
 
+@description('初回起動時に自己署名証明書で HTTPS を有効化する。ドメイン取得後は dify-enable-tls.sh で Let\'s Encrypt に差し替え。')
+param enableTls bool = true
+
+@description('Let\'s Encrypt 登録用メールアドレス（dify-enable-tls.sh に埋め込む）。')
+param certbotEmail string = 'admin@example.com'
+
 // リソースグループを作成
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
@@ -69,6 +75,8 @@ module resources 'resources.bicep' = {
     deployKeyVault: deployKeyVault
     enableAutoShutdown: enableAutoShutdown
     autoShutdownTime: autoShutdownTime
+    enableTls: enableTls
+    certbotEmail: certbotEmail
   }
 }
 
