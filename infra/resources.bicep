@@ -1,14 +1,11 @@
-// Dify on Azure VM — ルートテンプレート（サブスクリプションスコープ）
-// リソースグループを作成し、その RG にスコープして resources.bicep を呼び出す。
-//   az deployment sub create -l <location> -f infra/main.bicep -p infra/main.bicepparam
+// Dify on Azure VM — リソースグループ内のリソース一式
+// main.bicep（サブスクリプションスコープ）から、作成済み RG にスコープして呼び出される。
+// network / vm / keyvault モジュールを束ねる。
 
-targetScope = 'subscription'
+targetScope = 'resourceGroup'
 
-@description('作成するリソースグループ名。')
-param resourceGroupName string = 'dify-rg'
-
-@description('リソースグループおよび全リソースのリージョン。')
-param location string = 'japaneast'
+@description('全リソースのデプロイ先リージョン。')
+param location string = resourceGroup().location
 
 @description('リソース名のプレフィックス。')
 @minLength(2)
@@ -47,45 +44,54 @@ param enableAutoShutdown bool = true
 @description('自動停止の時刻（HHmm 形式, JST）。例: 1900 = 19:00。')
 param autoShutdownTime string = '1900'
 
-// リソースグループを作成
-resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: resourceGroupName
-  location: location
-}
-
-// 作成した RG にスコープしてリソース一式をデプロイ
-module resources 'resources.bicep' = {
-  name: 'resources'
-  scope: rg
+module network 'modules/network.bicep' = {
+  name: 'network'
   params: {
     location: location
     namePrefix: namePrefix
-    adminUsername: adminUsername
-    adminPublicKey: adminPublicKey
     allowedSshSourceCidr: allowedSshSourceCidr
-    vmSize: vmSize
-    osDiskSizeGB: osDiskSizeGB
-    osDiskStorageAccountType: osDiskStorageAccountType
-    deployKeyVault: deployKeyVault
-    enableAutoShutdown: enableAutoShutdown
-    autoShutdownTime: autoShutdownTime
   }
 }
 
-@description('作成されたリソースグループ名。')
-output resourceGroupName string = rg.name
+module vm 'modules/vm.bicep' = {
+  name: 'vm'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    subnetId: network.outputs.subnetId
+    publicIpId: network.outputs.publicIpId
+    adminUsername: adminUsername
+    adminPublicKey: adminPublicKey
+    vmSize: vmSize
+    osDiskSizeGB: osDiskSizeGB
+    osDiskStorageAccountType: osDiskStorageAccountType
+    enableAutoShutdown: enableAutoShutdown
+    autoShutdownTime: autoShutdownTime
+    // cloud-init は resources.bicep からの相対パスで読み込む
+    customData: loadFileAsBase64('cloud-init.yaml')
+  }
+}
+
+module keyVault 'modules/keyvault.bicep' = if (deployKeyVault) {
+  name: 'keyvault'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    vmPrincipalId: vm.outputs.principalId
+  }
+}
 
 @description('VM のパブリック IP アドレス。')
-output publicIpAddress string = resources.outputs.publicIpAddress
+output publicIpAddress string = network.outputs.publicIpAddress
 
 @description('VM への SSH 接続コマンド。')
-output sshCommand string = resources.outputs.sshCommand
+output sshCommand string = 'ssh ${adminUsername}@${network.outputs.publicIpAddress}'
 
 @description('VM の手動起動コマンド（夜間自動停止後の利用前に実行）。')
-output startCommand string = resources.outputs.startCommand
+output startCommand string = 'az vm start -g ${resourceGroup().name} -n ${vm.outputs.vmName}'
 
 @description('Dify コンソール URL（TLS 設定前は HTTP）。')
-output difyUrl string = resources.outputs.difyUrl
+output difyUrl string = 'http://${network.outputs.publicIpAddress}'
 
 @description('作成された Key Vault 名（未作成なら空）。')
-output keyVaultName string = resources.outputs.keyVaultName
+output keyVaultName string = deployKeyVault ? keyVault.outputs.keyVaultName : ''

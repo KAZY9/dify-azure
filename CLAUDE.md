@@ -59,9 +59,9 @@
 ## Commands
 
 ```bash
-# --- Azure インフラ（Bicep） ---
-az deployment group what-if -g <rg> -f infra/main.bicep   # 適用前の差分確認
-az deployment group create  -g <rg> -f infra/main.bicep   # VM/VNet/NSG 等をデプロイ
+# --- Azure インフラ（Bicep, サブスクリプションスコープ: RG ごと作成） ---
+az deployment sub what-if -l japaneast -f infra/main.bicep -p infra/main.bicepparam   # 適用前の差分確認
+az deployment sub create  -l japaneast -f infra/main.bicep -p infra/main.bicepparam   # RG + VM/VNet/NSG 等をデプロイ
 
 # --- Dify（VM 上で公式 docker compose） ---
 docker compose up -d        # 起動（バックグラウンド）

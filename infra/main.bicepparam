@@ -1,5 +1,9 @@
 using './main.bicep'
 
+// テンプレートがこの RG を作成し、その中に一式をデプロイする。
+param resourceGroupName = 'dify-rg'
+param location = 'japaneast'
+
 param namePrefix = 'dify'
 param adminUsername = 'azureuser'
 
