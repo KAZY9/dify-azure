@@ -41,6 +41,23 @@ az deployment group create -g dify-rg -f infra/main.bicep -p infra/main.biceppar
 #    数分後、difyUrl にアクセスして初期セットアップ
 ```
 
+## 運用（起動・停止）
+
+検証用途のため「**使う前に手動起動、夜 19:00 JST に自動停止**」で運用する。
+
+```bash
+# 利用前に手動で起動（夜間の自動停止後）
+az vm start -g dify-rg -n dify-vm        # デプロイ出力 startCommand にも表示される
+
+# 即時停止したい場合（deallocate = コンピューティング課金を止める）
+az vm deallocate -g dify-rg -n dify-vm
+```
+
+- 自動停止は毎日 **19:00 JST**（`autoShutdownTime` / `enableAutoShutdown` で変更可）。Auto-shutdown は停止のみで、**開始は行わない**。
+- 停止(deallocate)中も **OS ディスクと Static Public IP の課金は継続**する（合計 約 $8〜9/月）。
+- Public IP は **Static** のため、停止→起動で **IP は変わらない**。
+- Dify コンテナは `restart: always` + Docker 自動起動により、**起動後に自動復帰**する（データは名前付きボリュームに永続）。
+
 ## 検証（lint / build）
 
 ```bash

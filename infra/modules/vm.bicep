@@ -26,8 +26,25 @@ param vmSize string = 'Standard_D4s_v5'
 @description('OS ディスクサイズ（GB）。')
 param osDiskSizeGB int = 64
 
+@description('OS ディスクのストレージ種別。')
+@allowed([
+  'Standard_LRS'
+  'StandardSSD_LRS'
+  'Premium_LRS'
+])
+param osDiskStorageAccountType string = 'StandardSSD_LRS'
+
 @description('Base64 エンコードした cloud-init の内容。')
 param customData string
+
+@description('夜間の自動停止(deallocate)を有効化する。開始は手動運用（az vm start）。')
+param enableAutoShutdown bool = true
+
+@description('自動停止の時刻（HHmm 形式, autoShutdownTimeZone 基準）。例: 1900 = 19:00。')
+param autoShutdownTime string = '1900'
+
+@description('自動停止のタイムゾーン（Windows タイムゾーン ID）。JST は Tokyo Standard Time。')
+param autoShutdownTimeZone string = 'Tokyo Standard Time'
 
 resource nic 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: '${namePrefix}-nic'
@@ -87,7 +104,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
         createOption: 'FromImage'
         diskSizeGB: osDiskSizeGB
         managedDisk: {
-          storageAccountType: 'Premium_LRS'
+          storageAccountType: osDiskStorageAccountType
         }
       }
     }
@@ -98,6 +115,25 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
         }
       ]
     }
+  }
+}
+
+// 夜間に VM を deallocate する自動停止スケジュール。
+// 名前は 'shutdown-computevm-<vmName>' 形式にすると VM ブレードの Auto-shutdown に表示される。
+resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = if (enableAutoShutdown) {
+  name: 'shutdown-computevm-${vm.name}'
+  location: location
+  properties: {
+    status: 'Enabled'
+    taskType: 'ComputeVmShutdownTask'
+    dailyRecurrence: {
+      time: autoShutdownTime
+    }
+    timeZoneId: autoShutdownTimeZone
+    notificationSettings: {
+      status: 'Disabled'
+    }
+    targetResourceId: vm.id
   }
 }
 
